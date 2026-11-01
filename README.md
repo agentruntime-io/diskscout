@@ -20,6 +20,9 @@ Built as the SpaceSniffer-style treemap many people recommend, for a Windows tha
 
 *The screenshots show a made-up demo disk, not a real one.*
 
+**New here? Read the [user guide](docs/USER_GUIDE.md):** your first scan, reading the map, freeing space safely, what the
+duplicate views mean, using Claude, and what to do when something goes wrong. This README is the reference.
+
 ## Get it
 
 Prebuilt exes are attached to each [release](https://github.com/agentruntime-io/diskscout/releases): download `DiskScout-<version>.exe` and run it.
