@@ -20,6 +20,9 @@ jobs:
     # The tests have to run on Windows: the app is Windows-only, and they exercise real NTFS behaviour (hardlinks, junctions,
     # system attributes, change notifications). This is the only Windows job; it costs nothing while the repository is public
     # (GitHub does not charge for hosted runners on public repositories). The release build does not use a Windows runner.
+    # Stay free: runs only while the repository is public. If it is ever made private this job skips itself (a skipped job is
+    # not billed) instead of quietly using the organisation's included minutes, where Windows counts double.
+    if: ${{ !github.event.repository.private }}
     runs-on: windows-latest
     timeout-minutes: 15
     steps:

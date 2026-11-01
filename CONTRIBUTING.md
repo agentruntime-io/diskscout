@@ -51,7 +51,8 @@ could make the app delete something it should not, or that exposes the local ser
 Maintainers: push a tag like `v1.8.0` on a commit whose CI run has passed. The Release workflow refuses to run otherwise, then
 cross-compiles `DiskScout-1.8.0.exe` on a Linux runner (the version is stamped in with `-X main.version`; there is no cgo, so
 it is the same exe a Windows build gives) and attaches it with its SHA-256 to a GitHub release. The tests themselves run on a
-Windows runner in CI, which is free while the repository is public.
+Windows runner in CI, which is free while the repository is public. Both workflows skip themselves if the repository is ever
+made private, so they cannot quietly use up an organisation's included minutes (Windows minutes count double).
 
 ## License
 
