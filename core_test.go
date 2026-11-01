@@ -474,3 +474,29 @@ func TestPathHelpers(t *testing.T) {
 		t.Error("fmtBytes")
 	}
 }
+
+// A profile folder can be written in its old 8.3 form ("RUNNER~1" for "runneradmin"), and %TEMP% often is. It is still
+// the current account, not "another user".
+func TestOtherUsersRuleKnowsTheCurrentAccountUnderBothSpellings(t *testing.T) {
+	m, err := compileRule("{otherusers}", []string{"runneradmin", "runner~1"}, `c:\users\runneradmin`)
+	if err != nil {
+		t.Fatal(err)
+	}
+	for p, other := range map[string]bool{
+		`c:\users\runneradmin\appdata\local\temp\x.tmp`: false,
+		`c:\users\runner~1\appdata\local\temp\x.tmp`:    false,
+		`c:\users\someone\documents\x.pdf`:              true,
+		`c:\users\runner\documents\x.pdf`:               true, // a different account whose name merely starts the same
+		`c:\hard\x.bin`:                                 false,
+	} {
+		if m(p) != other {
+			t.Errorf("%s: other account = %v, want %v", p, m(p), other)
+		}
+	}
+	if name := shortName(os.Getenv("USERPROFILE")); name == "" {
+		t.Log("this profile has no separate 8.3 name (normal for short account names)")
+	}
+	if shortName("") != "" {
+		t.Fatal("no path, no short name")
+	}
+}

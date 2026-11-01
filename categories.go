@@ -63,15 +63,20 @@ type Classifier struct {
 
 func newClassifier(cats []Category, user string) (*Classifier, error) {
 	c := &Classifier{Cats: cats}
+	profile := os.Getenv("USERPROFILE")
+	users := []string{strings.ToLower(user)}
 	if user == "" {
-		user = filepath.Base(os.Getenv("USERPROFILE"))
+		users = []string{strings.ToLower(filepath.Base(profile))}
+		// the same folder can also be written in its old 8.3 form (RUNNER~1 for runneradmin), as %TEMP% often is
+		if short := strings.ToLower(shortName(profile)); short != "" && short != users[0] {
+			users = append(users, short)
+		}
 	}
-	user = strings.ToLower(user)
-	home := strings.ToLower(os.Getenv("USERPROFILE"))
+	home := strings.ToLower(profile)
 	for _, cat := range cats {
 		var ms []matcher
 		for _, r := range cat.Rules {
-			m, err := compileRule(r, user, home)
+			m, err := compileRule(r, users, home)
 			if err != nil {
 				return nil, fmt.Errorf("%s: %q: %w", cat.Name, r, err)
 			}
@@ -82,15 +87,23 @@ func newClassifier(cats []Category, user string) (*Classifier, error) {
 	return c, nil
 }
 
-func compileRule(rule, user, home string) (matcher, error) {
+func compileRule(rule string, users []string, home string) (matcher, error) {
 	rule = strings.TrimSpace(rule)
 	switch {
 	case rule == "":
 		return nil, fmt.Errorf("empty rule")
 	case rule == "{otherusers}":
 		return func(p string) bool {
-			// ?:\users\<name>\...  where <name> is not the current account
-			return len(p) > 9 && p[1:9] == `:\users\` && !strings.HasPrefix(p[9:], user+`\`)
+			// ?:\users\<name>\...  where <name> is not the current account (under either of its spellings)
+			if len(p) <= 9 || p[1:9] != `:\users\` {
+				return false
+			}
+			for _, u := range users {
+				if strings.HasPrefix(p[9:], u+`\`) {
+					return false
+				}
+			}
+			return true
 		}, nil
 	case strings.HasPrefix(rule, "re:"):
 		rx, err := regexp.Compile("(?i)" + rule[3:])

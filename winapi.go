@@ -164,3 +164,17 @@ func emptyRecycleBin(root string) error {
 	}
 	return nil
 }
+
+// shortName is the last part of a path in its old 8.3 form ("RUNNER~1" for "runneradmin"), or "" when it has none.
+func shortName(path string) string {
+	p, err := syscall.UTF16PtrFromString(path)
+	if err != nil || path == "" {
+		return ""
+	}
+	buf := make([]uint16, 520)
+	n, err := syscall.GetShortPathName(p, &buf[0], uint32(len(buf)))
+	if err != nil || n == 0 || int(n) > len(buf) {
+		return ""
+	}
+	return filepath.Base(syscall.UTF16ToString(buf[:n]))
+}
