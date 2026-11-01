@@ -1,0 +1,17 @@
+# built programs and the app's own data (settings, hash cache, logs): never part of the source
+dist/
+*.exe
+*.test
+diskscout-data/
+hashcache.tsv
+deleted.log
+commands.log
+diskscout.log
+connection.json
+
+# editors and OS
+.vscode/
+.idea/
+*.swp
+Thumbs.db
+desktop.ini

@@ -1,0 +1,32 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    # Windows only: the app uses Windows APIs, and the tests run against real files, hardlinks and change notifications
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+      - name: gofmt
+        shell: bash
+        run: |
+          out=$(gofmt -l .)
+          if [ -n "$out" ]; then echo "gofmt needed on:"; echo "$out"; exit 1; fi
+      - run: go vet ./...
+      - run: go test ./...
+      - name: build
+        run: go build -trimpath -ldflags "-s -w -H windowsgui" -o DiskScout.exe .
+      - uses: actions/upload-artifact@v4
+        with:
+          name: DiskScout-${{ github.sha }}
+          path: DiskScout.exe
