@@ -574,6 +574,41 @@ func TestChatArgsAdaptToTheInstalledClaude(t *testing.T) {
 	}
 }
 
+// An old Claude Code asks for a model that has been retired and gets a 404, three times over. The user should see one clear
+// error that says what it means, not three copies of a JSON blob that look like Claude's own answer.
+func TestChatExplainsAnOldClaudeAndShowsAnErrorOnce(t *testing.T) {
+	a := newTestApp(t)
+	raw := `API Error: 404 {"type":"error","error":{"type":"not_found_error","message":"model: claude-3-5-haiku-20241022"},"request_id":"req_x"}`
+	assistant := `{"type":"assistant","message":{"content":[{"type":"text","text":` + strconv.Quote(raw) + `}]}}`
+	result := `{"type":"result","subtype":"success","is_error":true,"result":` + strconv.Quote(raw) + `}`
+	for i := 0; i < 3; i++ {
+		a.chat.handleLine([]byte(assistant))
+	}
+	a.chat.handleLine([]byte(result))
+	h := a.chat.History()
+	if len(h) != 1 || h[0].Role != "error" {
+		t.Fatalf("one error, not an answer and not three copies: %+v", h)
+	}
+	for _, want := range []string{"claude-3-5-haiku-20241022", "no longer exists", "old version of Claude Code", "claude update", "ANTHROPIC_SMALL_FAST_MODEL"} {
+		if !strings.Contains(h[0].Text, want) {
+			t.Fatalf("the explanation should mention %q:\n%s", want, h[0].Text)
+		}
+	}
+	// real answers are left alone, and the same error in a later turn is shown again
+	a.chat.handleLine([]byte(`{"type":"assistant","message":{"content":[{"type":"text","text":"hello"}]}}`))
+	a.chat.handleLine([]byte(assistant))
+	if h = a.chat.History(); len(h) != 3 || h[1].Role != "assistant" || h[1].Text != "hello" || h[2].Role != "error" {
+		t.Fatalf("%+v", h)
+	}
+	// a missing sign-in is explained too, and keeps the original words
+	if got := explainChatError("Invalid API key · Please run /login"); !strings.Contains(got, "Please run /login") || !strings.Contains(got, "not signed in") {
+		t.Fatalf("%s", got)
+	}
+	if explainChatError("something else went wrong") != "something else went wrong" {
+		t.Fatal("errors we do not know are passed on as they are")
+	}
+}
+
 func TestReplayTextIsWhatWasSaid(t *testing.T) {
 	if replayText(nil) != "" || replayText([]ChatMsg{{Role: "error", Text: "boom"}, {Role: "system", Text: "Stopped."}}) != "" {
 		t.Fatal("with nothing said there is nothing to replay")

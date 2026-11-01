@@ -9,10 +9,12 @@ import (
 	"bytes"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"io"
 	"os"
 	"os/exec"
 	"path/filepath"
+	"regexp"
 	"strconv"
 	"strings"
 	"sync"
@@ -395,7 +397,7 @@ func (c *Chat) handleLine(line []byte) {
 		if json.Unmarshal(ev.Message.Content, &blocks) != nil {
 			var s string
 			if json.Unmarshal(ev.Message.Content, &s) == nil && strings.TrimSpace(s) != "" {
-				c.add("assistant", s, "")
+				c.addClaudeText(s)
 			}
 			return
 		}
@@ -403,7 +405,7 @@ func (c *Chat) handleLine(line []byte) {
 			switch b.Type {
 			case "text":
 				if strings.TrimSpace(b.Text) != "" {
-					c.add("assistant", b.Text, "")
+					c.addClaudeText(b.Text)
 				}
 			case "tool_use":
 				c.add("tool", shorten(string(b.Input), 160), strings.TrimPrefix(b.Name, "mcp__"+mcpName+"__"))
@@ -418,7 +420,7 @@ func (c *Chat) handleLine(line []byte) {
 			if msg == "" {
 				msg = "Claude stopped (" + ev.Subtype + ")."
 			}
-			c.add("error", msg, "")
+			c.addError(msg)
 		}
 		c.broadcastState()
 	}
@@ -459,4 +461,40 @@ func (c *Chat) Close() {
 	if dir != "" {
 		os.RemoveAll(dir)
 	}
+}
+
+// Claude Code reports a failed API call as ordinary-looking text ("API Error: 404 {...}") and then again as the result, and
+// repeats it for each background call. It reaches the user once, as an error, with what it means.
+func (c *Chat) addClaudeText(text string) {
+	if strings.HasPrefix(strings.TrimSpace(text), "API Error:") {
+		c.addError(text)
+		return
+	}
+	c.add("assistant", text, "")
+}
+
+func (c *Chat) addError(text string) {
+	text = explainChatError(text)
+	c.mu.Lock()
+	dup := len(c.msgs) > 0 && c.msgs[len(c.msgs)-1].Role == "error" && c.msgs[len(c.msgs)-1].Text == text
+	c.mu.Unlock()
+	if !dup {
+		c.add("error", text, "")
+	}
+}
+
+var modelGone = regexp.MustCompile(`not_found_error[^}]*model:\s*([A-Za-z0-9._:-]+)`)
+
+// explainChatError says what a Claude Code error means for the person reading it, when we know.
+func explainChatError(msg string) string {
+	if m := modelGone.FindStringSubmatch(msg); m != nil {
+		return fmt.Sprintf("Claude Code asked for the model %s, which no longer exists. That means this computer has an old version of Claude Code. "+
+			"Update it (open a terminal and run: claude update, or reinstall it) and try again.\n\n"+
+			"If you cannot update right now, set the environment variable ANTHROPIC_SMALL_FAST_MODEL to a current Haiku model "+
+			"(for example claude-haiku-5-5) and restart DiskScout.\n\n(%s)", m[1], shorten(strings.TrimSpace(msg), 160))
+	}
+	if low := strings.ToLower(msg); strings.Contains(low, "invalid api key") || strings.Contains(low, "please run /login") || strings.Contains(low, "not logged in") {
+		return msg + "\n\nClaude Code is not signed in on this computer. Open a terminal, run claude, and sign in with /login."
+	}
+	return msg
 }

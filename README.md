@@ -112,7 +112,8 @@ show on the map) and sizes coloured by how big they are. The ↔ button widens t
 the conversation: if Claude has to restart (you pressed **Stop**, or it ended on its own), the new one is handed the
 conversation so far along with your next message, so "continue" carries on. **New chat** forgets it, and closing the window
 does too: nothing is saved to disk. The chat works with older versions of Claude Code too: it leaves out the flags yours does not know, and refuses to
-start one that cannot be kept to DiskScout's tools (update it with `claude update`). Claude's own scans
+start one that cannot be kept to DiskScout's tools (update it with `claude update`). A very old Claude Code also asks for models
+that have since been retired, and Anthropic's API answers with a 404; the chat explains that in plain words and shows it once. Claude's own scans
 build the map only; it asks before hashing file contents for duplicates, and its scans never change your saved scan settings.
 
 What Claude can do: see the scan state and free space; browse the map; list the biggest files; list and filter duplicate
