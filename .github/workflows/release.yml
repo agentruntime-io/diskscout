@@ -1,30 +1,44 @@
 name: Release
 
 # Push a tag such as v1.8.0 and this builds the exe and publishes it on the Releases page, with its SHA-256.
+#
+# It runs on a Linux runner and cross-compiles: the program has no cgo, so the exe is the same as one built on Windows, and a
+# Linux runner is the cheapest and fastest. It will not run unless the tests (which run on Windows, in CI) passed for the
+# exact commit being tagged.
 on:
   push:
     tags: ["v*"]
 
 permissions:
   contents: write
+  actions: read
 
 jobs:
   release:
-    runs-on: windows-latest
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-go@v5
+      - uses: actions/checkout@v7
+      - uses: actions/setup-go@v7
         with:
           go-version-file: go.mod
-      - run: go test ./...
+          cache: false
+      - name: the tests passed for this commit
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          ok=$(gh run list --repo "$GITHUB_REPOSITORY" --workflow ci.yml --commit "$GITHUB_SHA" --status success --json databaseId --jq length)
+          if [ "$ok" = "0" ]; then
+            echo "There is no passing CI run for $GITHUB_SHA. Wait for CI to pass on main, then push the tag again."
+            exit 1
+          fi
+      - run: GOOS=windows go vet ./...
       - name: build
-        shell: bash
         run: |
           v="${GITHUB_REF_NAME#v}"
-          go build -trimpath -ldflags "-s -w -H windowsgui -X main.version=$v" -o "DiskScout-$v.exe" .
+          GOOS=windows GOARCH=amd64 CGO_ENABLED=0 go build -trimpath -ldflags "-s -w -H windowsgui -X main.version=$v" -o "DiskScout-$v.exe" .
           sha256sum "DiskScout-$v.exe" > "DiskScout-$v.exe.sha256"
       - name: publish
-        shell: bash
         env:
           GH_TOKEN: ${{ github.token }}
         run: gh release create "$GITHUB_REF_NAME" DiskScout-*.exe DiskScout-*.sha256 --generate-notes --title "DiskScout $GITHUB_REF_NAME"

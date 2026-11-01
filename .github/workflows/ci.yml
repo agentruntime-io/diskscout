@@ -3,20 +3,31 @@ name: CI
 on:
   push:
     branches: [main]
+    paths-ignore: ["**.md", "docs/**", "LICENSE"]
   pull_request:
+    paths-ignore: ["**.md", "docs/**", "LICENSE"]
 
 permissions:
   contents: read
 
+# a newer push to the same branch makes an older run pointless
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   test:
-    # Windows only: the app uses Windows APIs, and the tests run against real files, hardlinks and change notifications
+    # The tests have to run on Windows: the app is Windows-only, and they exercise real NTFS behaviour (hardlinks, junctions,
+    # system attributes, change notifications). This is the only Windows job; it costs nothing while the repository is public
+    # (GitHub does not charge for hosted runners on public repositories). The release build does not use a Windows runner.
     runs-on: windows-latest
+    timeout-minutes: 15
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-go@v5
+      - uses: actions/checkout@v7
+      - uses: actions/setup-go@v7
         with:
           go-version-file: go.mod
+          cache: false # there are no dependencies to cache
       - name: gofmt
         shell: bash
         run: |
@@ -26,7 +37,7 @@ jobs:
       - run: go test ./...
       - name: build
         run: go build -trimpath -ldflags "-s -w -H windowsgui" -o DiskScout.exe .
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         with:
           name: DiskScout-${{ github.sha }}
           path: DiskScout.exe
