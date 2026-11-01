@@ -16,7 +16,7 @@ import (
 )
 
 // version is set at release time (go build -ldflags "-X main.version=1.2.3"); this is the development value.
-var version = "1.7.1"
+var version = "1.8.0"
 
 type Settings struct {
 	Schema      int            `json:"schema"`
