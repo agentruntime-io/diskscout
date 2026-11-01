@@ -1,0 +1,79 @@
+<!doctype html>
+<html lang="en">
+<meta charset="utf-8">
+<title>DiskScout banner</title>
+<!--
+  The source of banner.png (README, 1600x400) and social-preview.png (GitHub social preview, 1280x640).
+  Open it as banner.html#banner or banner.html#social, or run render.js. White ground, black type, and the treemap in the
+  app's own colours. No gradients, no glow.
+-->
+<style>
+  :root {
+    --ink: #0b0b0c; --ink2: #3b3b3f; --mut: #77777d; --hair: #e4e4e7;
+    --video: #b0447f; --archive: #9c6c18; --image: #2c807f; --doc: #3f6fc0;
+    --audio: #8456c4; --code: #4b8338; --exe: #c04a3b; --other: #6b7385;
+  }
+  * { box-sizing: border-box; margin: 0; }
+  html, body { background: #fff; }
+  body { width: var(--w); height: var(--h); position: relative; overflow: hidden; color: var(--ink);
+    font-family: "Segoe UI Variable Display", "Segoe UI", system-ui, sans-serif; -webkit-font-smoothing: antialiased; }
+  body.banner { --w: 1600px; --h: 400px; --pad: 56px; --tw: 640px; --h1: 92px; }
+  body.social { --w: 1280px; --h: 640px; --pad: 64px; --tw: 560px; --h1: 100px; }
+
+  .text { position: absolute; left: var(--pad); top: var(--pad); bottom: var(--pad); width: var(--tw); display: flex; flex-direction: column; }
+  h1 { font-size: var(--h1); line-height: .92; letter-spacing: -.04em; font-weight: 700; }
+  .lead { margin-top: 22px; font-size: 31px; line-height: 1.15; font-weight: 600; letter-spacing: -.015em; }
+  .sub { margin-top: 14px; font-size: 19px; line-height: 1.42; color: var(--ink2); max-width: 500px; }
+  body.banner .sub { display: none; }
+  .facts { margin-top: 22px; display: flex; gap: 0; font: 600 13px/1 "Cascadia Mono", Consolas, monospace; letter-spacing: .06em; color: var(--ink2); text-transform: uppercase; }
+  .facts span { padding: 0 14px; border-left: 1.5px solid var(--hair); }
+  .facts span:first-child { padding-left: 0; border-left: 0; }
+  .by { margin-top: auto; }
+  .by .row { display: flex; align-items: center; gap: 12px; }
+  .slogan { margin-top: 12px; font-size: 16px; letter-spacing: -.005em; color: var(--ink2); }
+  .heart { width: 1.05em; height: 1.05em; vertical-align: -.17em; margin: 0 .08em; fill: #d9363e; }
+  .by img { width: 36px; height: 36px; mix-blend-mode: multiply; }
+  .by b { font-size: 18px; font-weight: 650; letter-spacing: -.01em; }
+  .by span { font: 14px "Cascadia Mono", Consolas, monospace; color: var(--mut); padding-left: 12px; border-left: 1.5px solid var(--hair); }
+  .by em { font-style: normal; color: var(--mut); font-size: 15px; margin-right: -4px; }
+
+  /* the treemap: clean cuts, solid blocks, the colours of the app, bleeding off the edges */
+  .map { position: absolute; right: -3px; top: -3px; bottom: -3px; left: calc(var(--pad) + var(--tw) + 36px); }
+  .b { position: absolute; border: 3px solid #fff; border-radius: 3px; color: #fff; padding: 11px 12px;
+    font: 600 13px/1.25 "Cascadia Mono", Consolas, monospace; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; background-clip: padding-box; }
+  .b small { display: block; margin-top: 3px; font-weight: 500; opacity: .85; font-size: 12px; }
+  .video { background: var(--video); } .archive { background: var(--archive); } .image { background: var(--image); }
+  .doc { background: var(--doc); } .audio { background: var(--audio); } .code { background: var(--code); }
+  .exe { background: var(--exe); } .other { background: var(--other); }
+</style>
+<body>
+  <div class="text">
+    <h1>DiskScout</h1>
+    <p class="lead">See where your disk space went.</p>
+    <p class="sub">A portable treemap and duplicate finder for Windows. It never freezes, it explains the space it cannot see, and it checks the copy that stays before it deletes.</p>
+    <div class="facts"><span>One .exe</span><span>No installer</span><span>No telemetry</span><span>MIT</span></div>
+    <div class="by">
+      <div class="row"><em>A project by</em><img src="agentruntime-logo.png" alt=""><b>AgentRuntime</b><span>agentruntime.io</span></div>
+      <p class="slogan">Built with <svg class="heart" viewBox="0 0 24 24" aria-label="love"><path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/></svg> for the community.</p>
+    </div>
+  </div>
+
+  <div class="map">
+    <!-- x y w h in percent of the map; sizes are made up (a demo disk) -->
+    <div class="b archive" style="left:0;top:0;width:33%;height:100%">ext4.vhdx<small>18.0 GB</small></div>
+    <div class="b video" style="left:33%;top:0;width:29%;height:51%">Holiday-Lisbon.mp4<small>3.1 GB</small></div>
+    <div class="b video" style="left:62%;top:0;width:19%;height:27%">DJI_0141.mp4<small>1.4 GB</small></div>
+    <div class="b video" style="left:62%;top:27%;width:19%;height:24%">Birthday.mkv</div>
+    <div class="b image" style="left:81%;top:0;width:19%;height:36%">RAW<small>700 MB</small></div>
+    <div class="b doc" style="left:81%;top:36%;width:19%;height:15%"></div>
+    <div class="b other" style="left:33%;top:51%;width:25%;height:49%">llama-7b.gguf<small>4.1 GB</small></div>
+    <div class="b code" style="left:58%;top:51%;width:14%;height:24%">node_modules</div>
+    <div class="b exe" style="left:58%;top:75%;width:14%;height:25%">Setup.exe<small>580 MB</small></div>
+    <div class="b audio" style="left:72%;top:51%;width:12%;height:30%">Music</div>
+    <div class="b archive" style="left:72%;top:81%;width:12%;height:19%"></div>
+    <div class="b image" style="left:84%;top:51%;width:16%;height:27%"></div>
+    <div class="b video" style="left:84%;top:78%;width:16%;height:22%"></div>
+  </div>
+
+  <script>document.body.className = (location.hash || '#banner').slice(1);</script>
+</body>

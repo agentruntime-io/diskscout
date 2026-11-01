@@ -1,4 +1,6 @@
-# DiskScout
+<h1 align="center"><img src="docs/banner/banner.png" alt="DiskScout. See where your disk space went. A project by AgentRuntime: built with love, for the community."></h1>
+
+<p align="center">A community project from <a href="https://agentruntime.io">AgentRuntime</a>.</p>
 
 [![CI](https://github.com/agentruntime-io/diskscout/actions/workflows/ci.yml/badge.svg)](https://github.com/agentruntime-io/diskscout/actions/workflows/ci.yml)
 [![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
@@ -228,8 +230,19 @@ Please read [CONTRIBUTING.md](CONTRIBUTING.md). The short version: keep it stand
 
 See [SECURITY.md](SECURITY.md) to report a vulnerability privately.
 
+## Disclaimer
+
+DiskScout is provided **as is, without warranty of any kind** (see [LICENSE](LICENSE)). You decide what to delete, and you use
+the app at your own risk. It does what this page describes (the Recycle Bin by default, a byte-for-byte check before a
+duplicate goes), but it is not a backup, and software can have bugs. Keep a copy of anything you cannot replace.
+
+**That includes anything done through Claude or another AI.** AI can be wrong. Claude can only suggest, and a removal it asks
+for happens only after you press **Approve**, so read what you approve. To the extent the law allows, AgentRuntime and the
+contributors are not responsible for any loss of data, or any other loss or damage, from using DiskScout, with or without AI.
+
 ## License
 
-[MIT](LICENSE). Free to use, change and share.
+[MIT](LICENSE). Free to use, change and share. The AgentRuntime name and logo are not part of that licence: the code is free
+to reuse, but please do not use the name or logo to suggest that your own project is ours.
 
 DiskScout is a community project from [AgentRuntime](https://agentruntime.io).

@@ -126,6 +126,10 @@ A reasonable order:
 **The to-clean list.** Press **T** on anything you select (or use *Add to clean list*) to put it on your list. The **To clean**
 button shows it. Nothing leaves your disk until you press the button there, and it only ever goes to the Recycle Bin.
 
+**Your call, your risk.** DiskScout is free software provided as is, with no warranty (see the
+[disclaimer](../README.md#disclaimer)). It is built to be careful, but it is not a backup, so keep a copy of anything you
+cannot replace before you clear space.
+
 ## Duplicates
 
 Open the **Duplicates** tab. DiskScout finds files with identical content (by size, then the start and end of each file, then
@@ -203,6 +207,10 @@ Try the suggestion chips under the box, or ask in your own words ("what is using
 - It has no file or shell access of its own. For commands it has one tool, `run_command`: a program and its arguments, nothing
   chained. A known read-only look (`docker system df -v`, `wsl -l -v`, …) runs at once. A cleanup (`docker system prune`,
   `go clean -cache`, …) and anything else **waits for you to press Run it**, with the exact command shown.
+
+**Claude can be wrong.** Its suggestions are only suggestions. Read what you are asked to approve, and remember that you, not
+Claude and not DiskScout, decide what is removed. Neither AgentRuntime nor the contributors are responsible for changes made
+with AI's help (see the [disclaimer](../README.md#disclaimer)).
 
 **Good to know:** **Stop** ends Claude's work; your next message carries on with the conversation so far. **New chat** forgets it,
 and closing the window does too (nothing is saved). A very old Claude Code may not work: DiskScout says so, and `claude update`
