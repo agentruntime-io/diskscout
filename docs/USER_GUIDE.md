@@ -4,6 +4,7 @@ This guide is for using DiskScout. (The [README](../README.md) is the reference,
 if you can run a program on Windows, you can follow it.
 
 - [Start it](#start-it)
+- [Updating](#updating)
 - [Your first scan](#your-first-scan)
 - [Reading the map](#reading-the-map)
 - [Finding what is big](#finding-what-is-big)
@@ -26,6 +27,21 @@ its settings next to itself).
   README).
 - It opens its own window (an Edge or Chrome "app" window, with no tabs or address bar), and it quits when you close that
   window. If neither browser is installed it opens your default browser instead; then stop it with **⋯ > Quit DiskScout**.
+
+## Updating
+
+DiskScout never updates itself, and never checks on its own. To find out whether there is a newer version, open **⋯ > Check
+for updates…**. It asks GitHub for the number of the newest release and tells you the answer; if there is a newer one, it
+offers to open the download page. It does not download or install anything.
+
+To update:
+
+1. Download the new `DiskScout-<version>.exe` from the [Releases](https://github.com/agentruntime-io/diskscout/releases) page.
+2. Close DiskScout, then run the new file **from the same folder** as the old one. Your settings, the hash cache and the
+   deletion log live in the `diskscout-data` folder next to the program, so they carry on. (Running it from a different
+   folder starts fresh, unless you copy that folder across.)
+3. If you connected Claude Desktop or Claude Code, press **Connect** again from the new file. It remembers where the program
+   is, and the file name changes with the version. Delete the old exe when you are happy with the new one.
 
 ## Your first scan
 
@@ -222,8 +238,10 @@ desktop app. If you connect, press Connect from the copy of `DiskScout.exe` you 
 
 ## Your data, and what is sent where
 
-**DiskScout itself sends nothing anywhere.** It has no telemetry and makes no network connections; it only talks to its own
-window on your own computer.
+**DiskScout sends nothing about you or your files anywhere.** It has no telemetry, and it only talks to its own window on your
+own computer, with one exception that you start yourself: **Check for updates** (⋯ menu) asks GitHub for the number of the
+newest release. GitHub sees your IP address, like any website you visit, and a request that says "DiskScout" and its version.
+Nothing else is sent, nothing is downloaded, and it never runs by itself.
 
 **If you use Ask Claude, or connect Claude Desktop or Claude Code, then what Claude is shown goes to Claude** under your own
 account and its terms: folder and file names and paths, sizes and dates, duplicate groups, and the output of the commands it
@@ -256,6 +274,7 @@ To start fresh, close DiskScout and delete that folder. Your own files are never
 | Chat: *not signed in* | Run `claude` once in a terminal and sign in with `/login`. |
 | **Live** turned itself off | Reading that folder again took too long, so it stopped and told you. Use **Rescan**, or open a smaller folder. |
 | **Zips** says "Cannot compare" | It is a `.rar`, `.7z` or `.tar` (DiskScout cannot open those), or a zip that will not open. |
+| **Check for updates** says it could not reach GitHub, or that GitHub did not answer in time | You may be offline, or the network is slow, or GitHub is limiting requests from your network for a while. Try again later. Nothing else in DiskScout needs the internet. |
 | A scan feels slow | Duplicate search reads file contents, so it is much slower than a map-only scan. The second run is faster (the hash cache). |
 
 Found a bug, or something confusing? Please [open an issue](https://github.com/agentruntime-io/diskscout/issues). If it could

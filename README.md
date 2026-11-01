@@ -29,8 +29,19 @@ duplicate views mean, using Claude, and what to do when something goes wrong. Th
 
 Prebuilt exes are attached to each [release](https://github.com/agentruntime-io/diskscout/releases): download `DiskScout-<version>.exe` and run it.
 The exe is unsigned, so Windows SmartScreen may warn the first time ("More info" > "Run anyway"). Or build it yourself in one
-command (see [Building](#building)). It makes no network connections of its own: it only talks to its own window over
-`127.0.0.1`.
+command (see [Building](#building)). It makes no network connections of its own, with one exception you start yourself,
+**Check for updates** (see [Updating](#updating)): otherwise it only talks to its own window over `127.0.0.1`.
+
+## Updating
+
+DiskScout never updates itself and never checks on its own. To see whether a newer version exists, open the **⋯** menu and
+choose **Check for updates…**. That asks GitHub for the number of the newest release, tells you what it found, and offers to
+open the download page. GitHub sees your IP address, like any website you visit, and a request that says "DiskScout" and its
+version number; nothing about your computer, disk or files is sent, and nothing is downloaded or installed.
+
+To update, download the new `DiskScout-<version>.exe`, close DiskScout, and run the new one **from the same folder**, so the
+`diskscout-data` folder beside it (settings, hash cache, `deleted.log`) carries on. If you connected Claude, press Connect
+again from the new file: it remembers where the exe is.
 
 ## What you get
 
@@ -184,6 +195,9 @@ Options: `--import <duplicates.json or folder>`, `--data <folder>`, `--browser` 
   If Claude gives up waiting (or you do not answer within 10 minutes) the request is withdrawn and nothing is done.
 - Hardlinked names count as one copy, because deleting one frees nothing.
 - The window talks to the app over `127.0.0.1` only, with a random token per run.
+- The only request that leaves your computer is the one you start with **Check for updates**. It reads a version number from
+  GitHub's reply and nothing else, and the page it offers to open is a fixed address. A test fails if any other part of the
+  program starts using the network.
 
 ## Building
 
@@ -214,6 +228,7 @@ window closes.
 | `dupes.go` | the duplicate search: size, then the head and tail of the file, then a full SHA-256, with a hash cache |
 | `actions.go` | everything that changes the disk, behind the same guards (see Safety) |
 | `archives.go` | zips against the folders they were unpacked into, byte for byte |
+| `update.go` | Check for updates: the one request that leaves the computer, made only when the button is pressed |
 | `folders.go`, `watch.go` | what the duplicate search saw per folder; live updating (`ReadDirectoryChangesW`) |
 | `categories.go`, `filter.go` | the category rules; the filter box language |
 | `server.go`, `state.go`, `report.go` | the HTTP/SSE API, app state and settings, saved reports |

@@ -483,6 +483,20 @@ func newServer(app *App, port int, quit func()) *Server {
 		app.saveSettings()
 		return map[string]any{"ok": true}, 200, nil
 	}))
+	// The only requests that leave this computer, and only when the user presses the button (see update.go).
+	m.HandleFunc("POST /api/update/check", s.post(func(r *http.Request, _ json.RawMessage) (any, int, error) {
+		info, err := checkForUpdate(r.Context(), version)
+		if err != nil {
+			return nil, 502, err
+		}
+		return info, 200, nil
+	}))
+	m.HandleFunc("POST /api/update/open", s.post(func(r *http.Request, _ json.RawMessage) (any, int, error) {
+		if err := openURL(releasesPage); err != nil { // always the same page: nothing in the request or in GitHub's reply picks it
+			return nil, 500, fmt.Errorf("could not open the browser: %v", err)
+		}
+		return map[string]any{"ok": true}, 200, nil
+	}))
 	m.HandleFunc("POST /api/quit", s.post(func(r *http.Request, _ json.RawMessage) (any, int, error) {
 		go func() { time.Sleep(100 * time.Millisecond); s.quit() }()
 		return map[string]any{"ok": true}, 200, nil

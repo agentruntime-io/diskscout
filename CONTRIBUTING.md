@@ -27,8 +27,11 @@ untouched.
    other files), it says so instead of guessing. Please keep that.
 4. **A calm window.** Neutral greys and one blue; colour is for the kind of file and for status, and status always comes with
    an icon and a label. No glow, no animation for its own sake. Look at both light and dark.
-5. **No network, no telemetry.** The app listens on `127.0.0.1` only. The chat panel runs the user's own `claude`; that is the
-   only thing that talks to the internet, and it is the user's own installation.
+5. **No telemetry, and almost no network.** The app listens on `127.0.0.1` only. Two things reach the internet, and only when
+   the user asks: the chat panel, which runs the user's own `claude` (their own installation), and **Check for updates**
+   (`update.go`): one request for the newest release's number, started by a button and never by itself. A new network call
+   needs a very good reason. Say so in the pull request, change the README and the user guide to match, and add the file to
+   the allow-list in `TestOnlyKnownFilesUseTheNetwork`.
 6. **Tests run against real files.** The existing tests use real folders, hardlinks, junctions and the real HTTP layer; follow
    that style rather than mocking the file system.
 

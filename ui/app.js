@@ -230,6 +230,7 @@ $('btnMenu').onclick = e => { e.stopPropagation(); showMenu($('btnMenu'), [
   { label: 'Category definitions…', run: openCats },
   { label: 'Scan errors…', run: openErrors },
   { label: 'Check the files still exist', run: () => verify(false) },
+  { label: 'Check for updates…', run: openUpdate },
   '-',
   { label: 'Quit DiskScout', run: () => { api('/api/quit', {}).catch(() => {}); document.body.replaceChildren(h('p', { class: 'empty', text: 'DiskScout has quit. You can close this window.' })); } },
 ]); };
@@ -1411,6 +1412,23 @@ async function fillConnect(info) {
   box.append(chat, dsk, cli, h('p', { class: 'hint', text: 'Whichever you use, Claude can look at your map and duplicates, point at things in this window and add suggestions to your clean list. Anything it asks to remove waits for your Approve here, and goes to the Recycle Bin.' }));
 }
 $('connClose').onclick = () => $('dlgConnect').close();
+
+// ------------------------------------------------------------------ check for updates
+// The one thing here that leaves the computer, and only because the user pressed the menu item: it asks GitHub for the newest
+// release's number. Nothing is downloaded or installed, and nothing checks by itself.
+async function openUpdate() {
+  $('uBody').textContent = 'Asking GitHub for the newest version…'; $('uHow').hidden = true; $('uErr').hidden = true; $('uOpen').hidden = true;
+  $('dlgUpdate').showModal();
+  try {
+    const r = await api('/api/update/check', {});
+    $('uBody').textContent = r.newer ? `Version ${r.latest} is available. You have ${r.current}.`
+      : r.latest === r.current ? `You are up to date: ${r.current} is the newest version.`
+      : `You have ${r.current}, which is newer than the latest release (${r.latest}).`;
+    $('uHow').hidden = $('uOpen').hidden = !r.newer;
+  } catch (e) { $('uBody').textContent = 'Could not check for updates.'; $('uErr').textContent = e.message; $('uErr').hidden = false; }
+}
+$('uClose').onclick = () => $('dlgUpdate').close();
+$('uOpen').onclick = () => api('/api/update/open', {}).catch(e => toast(e.message, 'err'));
 
 // ------------------------------------------------------------------ go
 connect();

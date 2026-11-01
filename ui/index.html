@@ -238,6 +238,15 @@
   <div class="btns"><button class="btn" id="connClose">Close</button></div>
 </dialog>
 
+<dialog id="dlgUpdate">
+  <h2>Check for updates</h2>
+  <p id="uBody"></p>
+  <p class="hint" id="uHow" hidden>Download the new <code>DiskScout-&lt;version&gt;.exe</code>, close this window and run it. Put it in the same folder as this one so your settings (the <code>diskscout-data</code> folder) carry over. If you connected Claude, press Connect again from the new file.</p>
+  <p class="err" id="uErr" hidden></p>
+  <p class="hint">Pressing the menu item asked GitHub for the number of the newest release. GitHub sees your IP address, like any website you visit. Nothing else is sent, and nothing is downloaded or installed. DiskScout never checks by itself.</p>
+  <div class="btns"><button class="btn" id="uClose">Close</button><button class="btn primary" id="uOpen" hidden>Open the download page</button></div>
+</dialog>
+
 <dialog id="dlgCats" class="wide">
   <h2>Category definitions</h2>
   <p class="hint">A category says how risky a duplicate is to remove. Each file is put in the <b>first</b> category (top to bottom) that has a matching rule; a category with no rules matches everything, so keep one last as the catch-all. Edit, then Save: the groups are re-sorted at once.</p>
