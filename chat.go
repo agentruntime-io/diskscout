@@ -7,6 +7,7 @@ package main
 import (
 	"bufio"
 	"bytes"
+	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -56,6 +57,43 @@ func cliHelp(cli string) string {
 
 // cliSupports asks the installed claude whether it knows a flag.
 func cliSupports(cli, flag string) bool { return strings.Contains(cliHelp(cli), flag) }
+
+var versionNumber = regexp.MustCompile(`\d+\.\d+\.\d+`)
+
+// cliVersion is the version the installed claude reports ("1.0.67"), or "" if it would not say. It is asked every time and
+// never remembered: it is only needed when something went wrong, and the user may have updated Claude Code since.
+func cliVersion(cli string) string {
+	ctx, cancel := context.WithTimeout(context.Background(), 8*time.Second)
+	defer cancel()
+	cmd := exec.CommandContext(ctx, cli, "--version")
+	cmd.SysProcAttr = &syscall.SysProcAttr{HideWindow: true, CreationFlags: 0x08000000}
+	out, _ := cmd.Output()
+	return versionNumber.FindString(string(out))
+}
+
+// claudeInstall is the Claude Code DiskScout runs for the chat, as far as it can tell. Both parts are "" if none was found.
+type claudeInstall struct{ Path, Version string }
+
+func installedClaude() claudeInstall {
+	cli := findCLI()
+	if cli == "" {
+		return claudeInstall{}
+	}
+	return claudeInstall{cli, cliVersion(cli)}
+}
+
+// String reads as part of a sentence, such as "version 1.0.67, at C:\Users\Sam\AppData\Roaming\npm\claude.cmd".
+func (i claudeInstall) String() string {
+	switch {
+	case i.Version != "" && i.Path != "":
+		return "version " + i.Version + ", at " + i.Path
+	case i.Version != "":
+		return "version " + i.Version
+	case i.Path != "":
+		return "at " + i.Path
+	}
+	return ""
+}
 
 // builtinTools are the tools Claude Code has of its own (files, shell, web). The chat must have none of them; this list is
 // only used with a Claude Code too old to have the --tools flag that removes them all at once.
@@ -130,6 +168,9 @@ type Chat struct {
 	errTail *tailBuffer
 	fresh   bool   // a process was just started and has been told nothing yet
 	sent    string // what the last message handed to Claude held (the conversation so far, if it was restarted), for tests
+	errID   int    // the message that showed the last error from Claude Code, and the words it arrived in
+	errRaw  string
+	install func() claudeInstall // which Claude Code is on this computer (replaced in tests)
 }
 
 // A Claude process only remembers what it was told. It ends when the user presses Stop (or if it dies), and the next
@@ -186,7 +227,7 @@ func replayText(msgs []ChatMsg) string {
 	return out
 }
 
-func newChat(a *App) *Chat { return &Chat{a: a} }
+func newChat(a *App) *Chat { return &Chat{a: a, install: installedClaude} }
 
 func (c *Chat) state() map[string]any {
 	c.mu.Lock()
@@ -196,7 +237,7 @@ func (c *Chat) state() map[string]any {
 
 func (c *Chat) broadcastState() { c.a.hub.Broadcast("chatstate", c.state()) }
 
-func (c *Chat) add(role, text, tool string) {
+func (c *Chat) add(role, text, tool string) int {
 	c.mu.Lock()
 	c.next++
 	m := ChatMsg{ID: c.next, Role: role, Text: text, Tool: tool, At: time.Now().UnixMilli()}
@@ -206,6 +247,7 @@ func (c *Chat) add(role, text, tool string) {
 	}
 	c.mu.Unlock()
 	c.a.hub.Broadcast("chat", m)
+	return m.ID
 }
 
 func (c *Chat) History() []ChatMsg {
@@ -259,6 +301,9 @@ func (c *Chat) ensure() error {
 	}
 	args, err := chatArgs(cliHelp(cli), cfgPath, promptArgs)
 	if err != nil {
+		if s := (claudeInstall{cli, cliVersion(cli)}).String(); s != "" {
+			err = fmt.Errorf("%w (the Claude Code found is %s)", err, s)
+		}
 		return err
 	}
 	cmd := exec.Command(cli, args...)
@@ -297,7 +342,11 @@ func (c *Chat) ensure() error {
 					msg += " " + t
 					if strings.Contains(strings.ToLower(t), "unknown option") {
 						helpCache.Delete(cli) // ask again next time: it may have been updated
-						msg += "\n\nThis Claude Code does not know a flag DiskScout used, so it is older than DiskScout expects. Update it (run claude update, or reinstall it) and try again."
+						which := ""
+						if s := (claudeInstall{cli, cliVersion(cli)}).String(); s != "" {
+							which = " (" + s + ")"
+						}
+						msg += "\n\nThis Claude Code" + which + " does not know a flag DiskScout used, so it is older than DiskScout expects. Update it (run claude update, or reinstall it) and try again."
 					}
 				}
 				c.add("error", msg, "")
@@ -473,25 +522,36 @@ func (c *Chat) addClaudeText(text string) {
 	c.add("assistant", text, "")
 }
 
-func (c *Chat) addError(text string) {
-	text = explainChatError(text)
+// addError shows an error from Claude Code once, explained. The same error arrives again for each call Claude Code makes, and
+// explaining it can mean asking the installed Claude Code for its version, so a repeat is recognised by the words it came in.
+func (c *Chat) addError(raw string) {
 	c.mu.Lock()
-	dup := len(c.msgs) > 0 && c.msgs[len(c.msgs)-1].Role == "error" && c.msgs[len(c.msgs)-1].Text == text
+	dup := len(c.msgs) > 0 && c.msgs[len(c.msgs)-1].ID == c.errID && c.errRaw == raw
 	c.mu.Unlock()
-	if !dup {
-		c.add("error", text, "")
+	if dup {
+		return
 	}
+	id := c.add("error", explainChatError(raw, c.install), "")
+	c.mu.Lock()
+	c.errID, c.errRaw = id, raw
+	c.mu.Unlock()
 }
 
 var modelGone = regexp.MustCompile(`not_found_error[^}]*model:\s*([A-Za-z0-9._:-]+)`)
 
-// explainChatError says what a Claude Code error means for the person reading it, when we know.
-func explainChatError(msg string) string {
+// explainChatError says what a Claude Code error means for the person reading it, when we know. install says which Claude
+// Code is on this computer; it is only asked for when the error is about the Claude Code being out of date.
+func explainChatError(msg string, install func() claudeInstall) string {
 	if m := modelGone.FindStringSubmatch(msg); m != nil {
-		return fmt.Sprintf("Claude Code asked for the model %s, which no longer exists. That means this computer has an old version of Claude Code. "+
-			"Update it (open a terminal and run: claude update, or reinstall it) and try again.\n\n"+
-			"If you cannot update right now, set the environment variable ANTHROPIC_SMALL_FAST_MODEL to a current Haiku model "+
-			"(for example claude-haiku-5-5) and restart DiskScout.\n\n(%s)", m[1], shorten(strings.TrimSpace(msg), 160))
+		which := ""
+		if s := install().String(); s != "" {
+			which = " (" + s + ")"
+		}
+		return fmt.Sprintf("Claude Code asked for the model %s, which no longer exists. That means this computer has an old version of Claude Code%s. "+
+			"Update it (open a terminal and run: claude update, or if you installed it with npm: npm install -g @anthropic-ai/claude-code@latest) and try again.\n\n"+
+			"If you cannot update right now, set the environment variables ANTHROPIC_MODEL and ANTHROPIC_SMALL_FAST_MODEL to a current Haiku model "+
+			"(for example claude-haiku-5-5) and restart DiskScout. Set both: the old Claude Code uses the retired model for its answers "+
+			"as well as for its background work.\n\n(%s)", m[1], which, shorten(strings.TrimSpace(msg), 160))
 	}
 	if low := strings.ToLower(msg); strings.Contains(low, "invalid api key") || strings.Contains(low, "please run /login") || strings.Contains(low, "not logged in") {
 		return msg + "\n\nClaude Code is not signed in on this computer. Open a terminal, run claude, and sign in with /login."

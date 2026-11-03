@@ -578,6 +578,11 @@ func TestChatArgsAdaptToTheInstalledClaude(t *testing.T) {
 // error that says what it means, not three copies of a JSON blob that look like Claude's own answer.
 func TestChatExplainsAnOldClaudeAndShowsAnErrorOnce(t *testing.T) {
 	a := newTestApp(t)
+	asked := 0
+	a.chat.install = func() claudeInstall {
+		asked++
+		return claudeInstall{Path: `C:\Users\Sam\AppData\Roaming\npm\claude.cmd`, Version: "1.0.67"}
+	}
 	raw := `API Error: 404 {"type":"error","error":{"type":"not_found_error","message":"model: claude-3-5-haiku-20241022"},"request_id":"req_x"}`
 	assistant := `{"type":"assistant","message":{"content":[{"type":"text","text":` + strconv.Quote(raw) + `}]}}`
 	result := `{"type":"result","subtype":"success","is_error":true,"result":` + strconv.Quote(raw) + `}`
@@ -589,10 +594,15 @@ func TestChatExplainsAnOldClaudeAndShowsAnErrorOnce(t *testing.T) {
 	if len(h) != 1 || h[0].Role != "error" {
 		t.Fatalf("one error, not an answer and not three copies: %+v", h)
 	}
-	for _, want := range []string{"claude-3-5-haiku-20241022", "no longer exists", "old version of Claude Code", "claude update", "ANTHROPIC_SMALL_FAST_MODEL"} {
+	for _, want := range []string{"claude-3-5-haiku-20241022", "no longer exists", "old version of Claude Code", "claude update", "npm install -g @anthropic-ai/claude-code@latest",
+		"version 1.0.67", `C:\Users\Sam\AppData\Roaming\npm\claude.cmd`, "ANTHROPIC_MODEL", "ANTHROPIC_SMALL_FAST_MODEL"} {
 		if !strings.Contains(h[0].Text, want) {
 			t.Fatalf("the explanation should mention %q:\n%s", want, h[0].Text)
 		}
+	}
+	// the version is asked for once, not once per copy of the error
+	if asked != 1 {
+		t.Fatalf("asked the installed Claude Code for its version %d times, want 1", asked)
 	}
 	// real answers are left alone, and the same error in a later turn is shown again
 	a.chat.handleLine([]byte(`{"type":"assistant","message":{"content":[{"type":"text","text":"hello"}]}}`))
@@ -600,12 +610,43 @@ func TestChatExplainsAnOldClaudeAndShowsAnErrorOnce(t *testing.T) {
 	if h = a.chat.History(); len(h) != 3 || h[1].Role != "assistant" || h[1].Text != "hello" || h[2].Role != "error" {
 		t.Fatalf("%+v", h)
 	}
-	// a missing sign-in is explained too, and keeps the original words
-	if got := explainChatError("Invalid API key · Please run /login"); !strings.Contains(got, "Please run /login") || !strings.Contains(got, "not signed in") {
+	// a missing sign-in is explained too, and keeps the original words; neither it nor an unknown error needs the version
+	never := func() claudeInstall {
+		t.Fatal("the version is only looked up for an out-of-date Claude Code")
+		return claudeInstall{}
+	}
+	if got := explainChatError("Invalid API key · Please run /login", never); !strings.Contains(got, "Please run /login") || !strings.Contains(got, "not signed in") {
 		t.Fatalf("%s", got)
 	}
-	if explainChatError("something else went wrong") != "something else went wrong" {
+	if explainChatError("something else went wrong", never) != "something else went wrong" {
 		t.Fatal("errors we do not know are passed on as they are")
+	}
+	// if the version cannot be read the explanation still stands, without empty brackets
+	got := explainChatError(raw, func() claudeInstall { return claudeInstall{} })
+	if !strings.Contains(got, "old version of Claude Code. Update it") || strings.Contains(got, "()") {
+		t.Fatalf("an unknown version should not leave a hole in the sentence:\n%s", got)
+	}
+}
+
+func TestClaudeInstallIsDescribedForAnErrorMessage(t *testing.T) {
+	for _, c := range []struct {
+		in   claudeInstall
+		want string
+	}{
+		{claudeInstall{`C:\npm\claude.cmd`, "1.0.67"}, `version 1.0.67, at C:\npm\claude.cmd`},
+		{claudeInstall{Version: "2.1.3"}, "version 2.1.3"},
+		{claudeInstall{Path: `C:\npm\claude.cmd`}, `at C:\npm\claude.cmd`},
+		{claudeInstall{}, ""},
+	} {
+		if got := c.in.String(); got != c.want {
+			t.Errorf("%+v: got %q, want %q", c.in, got, c.want)
+		}
+	}
+	// what `claude --version` prints, in the forms seen so far
+	for in, want := range map[string]string{"1.0.67 (Claude Code)\n": "1.0.67", "2.1.317 (Claude Code)": "2.1.317", "claude 3.0.0": "3.0.0", "": "", "no version here": ""} {
+		if got := versionNumber.FindString(in); got != want {
+			t.Errorf("%q: got %q, want %q", in, got, want)
+		}
 	}
 }
 
